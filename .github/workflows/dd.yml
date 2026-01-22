@@ -1,0 +1,45 @@
+name: Delayed Follow-Up Comment (6 Hours)
+
+permissions:
+  issues: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        required: true
+        type: string
+
+jobs:
+  delayed:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Wait 6 hours
+        run: sleep 120   # 6 hours (6 × 60 × 60)
+
+      - name: Post follow-up comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = Number(core.getInput("issue_number"));
+
+            // Optional safety check: only comment if no one replied
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+
+            if (comments.data.length > 1) {
+              console.log("Skipping follow-up: someone already replied.");
+              return;
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: "⏰ **Follow-up (6 hours):** If you haven’t received assistance yet, please reach out via the Live Support Team."
+            });
